@@ -140,6 +140,12 @@ def run_phase1(save_outputs: bool = True) -> dict:
     )
     region_table = regions_mod.region_summary_table(df)
 
+    # ---- Question D / P1 — where the elongated structures named in the prediction
+    # actually are (still raw data, no clustering run yet) ----
+    fig_p1_structures, _ = viz_mod.plot_p1_predicted_structures(
+        df, save_path=os.path.join(OUTPUT_DIR, "04_p1_predicted_structures.png") if save_outputs else None
+    )
+
     # ---- Question B: density (distance to 10th neighbor) ----
     dist_km = density_mod.kth_neighbor_distance_km(df)
     fig_hist, _ = viz_mod.plot_density_histogram(
@@ -165,7 +171,10 @@ def run_phase1(save_outputs: bool = True) -> dict:
         "region_table": region_table,
         "density_table": density_table,
         "dist_km": dist_km,
-        "figures": {"map": fig_map, "map_geo": fig_map_geo, "map_regions": fig_regions, "hist": fig_hist},
+        "figures": {
+            "map": fig_map, "map_geo": fig_map_geo, "map_regions": fig_regions,
+            "hist": fig_hist, "p1_structures": fig_p1_structures,
+        },
         "distance_explanation": DISTANCE_EXPLANATION,
         "predictions": PREDICTIONS,
     }

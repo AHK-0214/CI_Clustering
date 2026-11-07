@@ -51,6 +51,12 @@ def plot_world_map(df, title="Earthquake locations (non-earthquake events remove
     ax.grid(alpha=0.3)
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    # Close the figure right away so the inline/Colab backend does not auto-display it a
+    # second time as a side effect of simply *creating* it inside run_phase1(). The
+    # returned Figure object remains fully valid: Jupyter can still render it later
+    # (e.g. `results["figures"]["map"]` in its own cell) via the figure's own repr, it
+    # just will not pop up uninvited the moment this function runs.
+    plt.close(fig)
     return fig, ax
 
 
@@ -66,6 +72,7 @@ def plot_world_map_with_regions(df, save_path=None):
     ax.legend(loc="lower left", fontsize=8)
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
     return fig, ax
 
 
@@ -77,4 +84,47 @@ def plot_density_histogram(dist_km, save_path=None):
     ax.set_title("Distribution of distance to the 10th nearest neighbor (density metric)")
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return fig, ax
+
+
+# ---------------------------------------------------------------------
+# Prediction P1 — where are the elongated structures we expect K-Means (k=12)
+# to split apart? Purely descriptive (raw-data) map: boxes only mark the
+# *candidate* structures named in P1's reasoning (Mid-Atlantic Ridge, the west
+# coast of South America, and the East Asia / western Pacific arc chain). No
+# clustering is run here; this is still "Phase 1, before seeing any algorithm
+# output" per the assignment's rule.
+# ---------------------------------------------------------------------
+P1_CANDIDATE_STRUCTURES = {
+    "Mid-Atlantic Ridge": {
+        "lat_min": -40.0, "lat_max": 40.0, "lon_min": -40.0, "lon_max": -10.0,
+    },
+    "South America west coast (Andes subduction zone)": {
+        "lat_min": -56.0, "lat_max": 12.0, "lon_min": -82.0, "lon_max": -66.0,
+    },
+    "East Asia / western Pacific arc (Japan-Kuril-Izu-Bonin)": {
+        "lat_min": 20.0, "lat_max": 55.0, "lon_min": 122.0, "lon_max": 150.0,
+    },
+}
+
+
+def plot_p1_predicted_structures(df, save_path=None):
+    """World map highlighting the elongated structures named in prediction P1 —
+    the ones we expect a k=12 K-Means run to fragment across several clusters,
+    because their length exceeds the typical diameter of a compact Voronoi cell."""
+    fig, ax = plot_world_map(
+        df, title="Elongated structures referenced in P1 (candidates for K-Means fragmentation, k=12)"
+    )
+    colors = ["tab:red", "tab:green", "tab:purple"]
+    for (name, r), c in zip(P1_CANDIDATE_STRUCTURES.items(), colors):
+        width = r["lon_max"] - r["lon_min"]
+        height = r["lat_max"] - r["lat_min"]
+        rect = plt.Rectangle((r["lon_min"], r["lat_min"]), width, height,
+                              fill=False, edgecolor=c, linewidth=2, label=name)
+        ax.add_patch(rect)
+    ax.legend(loc="lower left", fontsize=7)
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
     return fig, ax
