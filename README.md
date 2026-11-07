@@ -1,43 +1,52 @@
-# CI_Clustering — پروژه خوشه‌بندی زلزله‌های جهان
+# CI_Clustering — Global Earthquake Clustering Project
 
-پیاده‌سازی پروژه درس هوش محاسباتی (دانشگاه فردوسی مشهد). منطق پروژه در `src/` به‌صورت
-ماژول پایتون نگه داشته می‌شود؛ نوت‌بوک‌های `notebooks/` فقط این ماژول‌ها را clone/pull و
-اجرا می‌کنند تا نیازی به ویرایش مکرر فایل `.ipynb` روی کولب نباشد.
+Implementation for the Computational Intelligence course (Ferdowsi University of Mashhad).
+Project logic is kept in `src/` as Python modules; the notebooks in `notebooks/` only
+clone/pull and run these modules, so the `.ipynb` file itself doesn't need frequent edits
+on Colab.
 
-## ساختار
+## Structure
 
 ```
 src/
-  config.py    # seed پایه (s) و ثابت‌ها
-  geo.py       # تبدیل lat/lon <-> xyz روی کره واحد، فاصله وتری <-> سطحی
-  data.py      # لود/پاک‌سازی دیتاست Significant Earthquakes 1965-2016
-  regions.py   # سه ناحیه انتخابی فاز ۱
-  density.py   # فاصله تا k-امین همسایه (معیار چگالی)
-  viz.py       # نقشه و نمودار
-  phase1.py    # ارکستراسیون کامل فاز ۱
+  config.py    # base seed (s) and constants
+  geo.py       # lat/lon <-> xyz on the unit sphere, chordal <-> surface distance
+  data.py      # load/clean the Significant Earthquakes 1965-2016 dataset
+  regions.py   # the three sample regions for Phase 1
+  density.py   # distance to the k-th neighbor (density metric)
+  viz.py       # map and chart plotting (incl. a real-world map with country borders)
+  phase1.py    # full Phase 1 orchestration
 notebooks/
   phase1_colab.ipynb
-data/          # دیتاست اینجا کش می‌شود (در git نیست)
-outputs/       # خروجی هر فاز اینجا نوشته می‌شود (در git نیست)
+data/          # dataset is cached here (not in git)
+outputs/       # each phase's output is written here (not in git)
 ```
 
-## seed
+## Seed
 
-`S_BASE` در `src/config.py` برابر سه رقم آخر شماره دانشجویی (۶۲۹) است.
-`s+1 = 630`, `s+2 = 631`, `s+3 = 632` طبق دستورالعمل محاسبه می‌شوند.
+`S_BASE` in `src/config.py` is the last three digits of the student ID (629).
+`s+1 = 630`, `s+2 = 631`, `s+3 = 632`, computed per the assignment.
 
-## دیتاست
+## Dataset
 
-دیتاست از کگل است: `usgs/earthquake-database`. دو راه برای در دسترس قرار دادن آن:
+The dataset is from Kaggle: `usgs/earthquake-database`. Two ways to make it available:
 
-1. دانلود دستی از کگل و قرار دادن در `data/database.csv`
-2. استفاده از `kagglehub` با `kaggle.json` (نوت‌بوک این مسیر را هم امتحان می‌کند)
+1. Download it manually from Kaggle and place it at `data/database.csv`
+2. Use `kagglehub` with `kaggle.json` (the notebook tries this path too)
 
-## اجرا
+## Running
 
 ```bash
 pip install -r requirements.txt
 python -m src.phase1
 ```
 
-یا در کولب: `notebooks/phase1_colab.ipynb` را ببینید.
+Or on Colab: see `notebooks/phase1_colab.ipynb`.
+
+## Notes on language
+
+Code, comments, docstrings, and chart titles throughout this project are in English.
+The few text blocks that are the literal answers to the assignment's written questions
+(the P1-P4 predictions in `src/phase1.py`, the distance explanation, and the region
+selection rationale in `src/regions.py`) are kept in Persian on purpose, since they are
+submitted as-is as part of the report.

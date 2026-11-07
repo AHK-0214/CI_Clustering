@@ -1,8 +1,8 @@
 """
-اجرای کامل فاز ۱: شناخت داده و پیش‌بینی.
+Full Phase 1 run: data understanding and predictions.
 
-این ماژول فقط داده خام را می‌بیند و هیچ الگوریتم خوشه‌بندی اجرا نمی‌کند،
-مطابق با الزام دستورالعمل («خروجی خوشه‌بندی‌ها را نبینید»).
+This module only looks at the raw data and does not run any clustering algorithm,
+per the assignment's requirement ("do not look at clustering output yet").
 """
 import os
 import pandas as pd
@@ -15,28 +15,31 @@ from .config import OUTPUT_DIR, S_BASE
 
 
 # ---------------------------------------------------------------------
-# پرسش ت - پیش‌بینی‌های P1 تا P4 (باید پیش از دیدن هر خروجی خوشه‌بندی ثبت شوند)
+# Question D - predictions P1 through P4 (must be recorded before seeing any
+# clustering output). Note: the "prediction", "reason" and "rejection_criterion"
+# values are written in Persian on purpose, since they are the actual answer text
+# submitted for the assignment's report; only the dict keys (column labels) are English.
 # ---------------------------------------------------------------------
 PREDICTIONS = {
     "P1": {
-        "پیش‌بینی": (
+        "prediction": (
             "ساختار کشیده‌ای که به‌احتمال زیاد بین چند خوشه K-Means (k=12) تقسیم می‌شود، "
             "پشته میان‌اقیانوسی اطلس (Mid-Atlantic Ridge) است؛ همچنین بخش‌هایی از کمربند آتش "
             "در امتداد سواحل غربی آمریکای جنوبی و شرق آسیا که طولی و کشیده هستند."
         ),
-        "دلیل": (
+        "reason": (
             "K-Means خوشه‌ها را با مرز تصمیم Voronoi حول k مرکز می‌سازد که برای خوشه‌های "
             "کروی/فشرده مناسب است. یک ساختار باریک و طولانی (مثل یک خط گسل) اگر طولش از قطر "
             "معمول یک خوشه Voronoi بیشتر باشد، توسط چند مرکز مجاور هم پوشش داده می‌شود و بین "
             "چند خوشه تکه‌تکه می‌شود."
         ),
-        "معیار رد": (
+        "rejection_criterion": (
             "اگر پس از اجرا مشاهده شود که کل طول پشته میان‌اقیانوسی در یک یا دو خوشه قرار گرفته "
             "(و نه در سه خوشه یا بیشتر)، این پیش‌بینی رد می‌شود."
         ),
     },
     "P2": {
-        "پیش‌بینی": (
+        "prediction": (
             "با افزایش eps از مقدار کوچک به بزرگ، درصد نقاط نویز به‌صورت یکنوا کاهش و اندازه "
             "بزرگ‌ترین خوشه به‌صورت یکنوا افزایش می‌یابد. در eps بزرگ، به‌دلیل پدیده زنجیره‌ای "
             "(chaining) بین نواحی با چگالی متفاوت، یک خوشه غول‌پیکر بیشتر نواحی پرتراکم را در "
@@ -44,45 +47,45 @@ PREDICTIONS = {
             "کم‌تراکم (مثل R3) را به‌خوبی خوشه‌بندی کند، چون طبق تعریف DBSCAN یک eps سراسری است "
             "و تفاوت دستوری در چگالی بین نواحی (مشاهده‌شده در فاز ۱-ب) این مصالحه را سخت می‌کند."
         ),
-        "دلیل": (
+        "reason": (
             "DBSCAN نقاط را بر اساس شمارش همسایگان در شعاع ثابت eps هسته‌ای تعریف می‌کند؛ "
             "افزایش eps شعاع همسایگی هر نقطه را بزرگ‌تر و در نتیجه احتمال رسیدن به آستانه "
             "min_samples را بیشتر می‌کند، و نیز خوشه‌های مجاور را به هم متصل می‌کند."
         ),
-        "معیار رد": (
+        "rejection_criterion": (
             "اگر در جدول فاز ۳-آ یک بازه از eps پیدا شود که در آن هم درصد نویز در R1 (پرتراکم) پایین "
             "بماند و هم R3 (کم‌تراکم) به‌طور معقول جدا از نویز باقی بماند، بخش دوم این پیش‌بینی رد می‌شود."
         ),
     },
     "P3": {
-        "پیش‌بینی": (
+        "prediction": (
             "Single Link بیشتر مستعد تشکیل یک خوشه بسیار بزرگ و چند خوشه بسیار کوچک (ساختار "
             "'rich-get-richer') است، در حالی‌که Average Link خوشه‌های متوازن‌تری می‌سازد."
         ),
-        "دلیل": (
+        "reason": (
             "در Single Link فاصله دو خوشه برابر کمینه فاصله بین هر عضو از دو خوشه است؛ این معیار "
             "نسبت به پدیده زنجیره‌ای بسیار حساس است: کافی است یک مسیر نازک از نقاط نزدیک به هم دو "
             "توده بزرگ را به هم وصل کند. Average Link از میانگین همه فاصله‌های دوبه‌دو استفاده می‌کند "
             "که نسبت به چنین پل‌های نازکی مقاوم‌تر است و خوشه‌های فشرده‌تر و متوازن‌تر تولید می‌کند."
         ),
-        "معیار رد": (
+        "rejection_criterion": (
             "اگر در فاز ۳-پ توزیع اندازه خوشه‌های Average Link نامتوازن‌تر از Single Link باشد "
             "(مثلاً واریانس اندازه خوشه بیشتر)، این پیش‌بینی رد می‌شود."
         ),
     },
     "P4": {
-        "پیش‌بینی": (
+        "prediction": (
             "برای سناریوی الف (منطقه‌بندی)، K-Means را مناسب‌تر می‌دانیم چون هر نقطه را به دقیق یک "
             "خوشه اختصاص می‌دهد (پوشش ۱۰۰٪) و تعداد مناطق (k) را می‌توان مستقیماً در بازه ۱۰ تا ۲۰ "
             "تنظیم کرد. برای سناریوی ب (کشف ساختار)، DBSCAN را مناسب‌تر می‌دانیم چون تعداد خوشه‌ها "
             "را از قبل تحمیل نمی‌کند و امکان نویز گذاشتن نقاط دورافتاده را می‌دهد."
         ),
-        "دلیل": (
+        "reason": (
             "فرض‌های K-Means (خوشه‌های کروی حول مرکز) با هدف سناریوی الف (مناطق قابل‌توصیف و پوشش "
             "کامل) سازگارتر است؛ فرض DBSCAN (پیوستگی چگالی) با هدف سناریوی ب (کشف کمربندها بدون "
             "تعیین k) سازگارتر است."
         ),
-        "معیار رد": (
+        "rejection_criterion": (
             "اگر در فاز ۴ معلوم شود DBSCAN با تنظیم مناسب eps پوشش نزدیک به کامل و مناطق به همان "
             "اندازه قابل‌توصیف برای سناریوی الف تولید می‌کند، یا K-Means در کشف کمربندهای غیرکروی "
             "سناریوی ب عملکرد قابل قبولی دارد، بخش مربوطه این پیش‌بینی رد می‌شود."
@@ -92,7 +95,8 @@ PREDICTIONS = {
 
 
 # ---------------------------------------------------------------------
-# پرسش پ - توضیح مشکل فاصله اقلیدسی مستقیم روی lat/lon
+# Question C - explanation of why plain Euclidean distance on lat/lon is misleading.
+# Kept in Persian on purpose: this is the actual answer text for the assignment's report.
 # ---------------------------------------------------------------------
 DISTANCE_EXPLANATION = """
 محاسبه مستقیم فاصله اقلیدسی روی ستون‌های خام Latitude و Longitude گمراه‌کننده است
@@ -117,23 +121,26 @@ DISTANCE_EXPLANATION = """
 
 
 def run_phase1(save_outputs: bool = True) -> dict:
-    """اجرای کامل فاز ۱ و بازگرداندن دیکشنری نتایج (برای استفاده در نوت‌بوک)."""
+    """Run all of Phase 1 and return a results dict (for use in the notebook)."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ---- بارگذاری و پاک‌سازی ----
+    # ---- Load and clean ----
     df = data_mod.load_clean_earthquakes()
     n_total = len(df)
 
-    # ---- پرسش آ: نقشه و سه ناحیه ----
+    # ---- Question A: map and three regions ----
     fig_map, _ = viz_mod.plot_world_map(
         df, save_path=os.path.join(OUTPUT_DIR, "01_world_map.png") if save_outputs else None
+    )
+    fig_map_geo = viz_mod.plot_world_map_geo(
+        df, save_path=os.path.join(OUTPUT_DIR, "01b_world_map_geo.html") if save_outputs else None
     )
     fig_regions, _ = viz_mod.plot_world_map_with_regions(
         df, save_path=os.path.join(OUTPUT_DIR, "02_world_map_regions.png") if save_outputs else None
     )
     region_table = regions_mod.region_summary_table(df)
 
-    # ---- پرسش ب: چگالی (فاصله تا دهمین همسایه) ----
+    # ---- Question B: density (distance to 10th neighbor) ----
     dist_km = density_mod.kth_neighbor_distance_km(df)
     fig_hist, _ = viz_mod.plot_density_histogram(
         dist_km, save_path=os.path.join(OUTPUT_DIR, "03_density_histogram.png") if save_outputs else None
@@ -158,7 +165,7 @@ def run_phase1(save_outputs: bool = True) -> dict:
         "region_table": region_table,
         "density_table": density_table,
         "dist_km": dist_km,
-        "figures": {"map": fig_map, "map_regions": fig_regions, "hist": fig_hist},
+        "figures": {"map": fig_map, "map_geo": fig_map_geo, "map_regions": fig_regions, "hist": fig_hist},
         "distance_explanation": DISTANCE_EXPLANATION,
         "predictions": PREDICTIONS,
     }
@@ -166,6 +173,6 @@ def run_phase1(save_outputs: bool = True) -> dict:
 
 if __name__ == "__main__":
     results = run_phase1()
-    print(f"تعداد کل زلزله‌ها پس از پاک‌سازی: {results['n_total']}")
+    print(f"Total number of earthquakes after cleaning: {results['n_total']}")
     print(results["region_table"])
     print(results["density_table"])

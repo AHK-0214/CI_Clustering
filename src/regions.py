@@ -1,12 +1,17 @@
 """
-سه ناحیه نمونه فاز ۱ (پرسش آ).
+The three sample regions for Phase 1 (Question A).
 
-این سه ناحیه بر اساس مشاهده نقشه خام (قبل از هر خوشه‌بندی) انتخاب شده‌اند:
-  R1 - اندونزی/فیلیپین (بخشی از کمربند آتش): بسیار متراکم، چندبخشی/کشیده در امتداد گسل‌ها.
-  R2 - میان‌اقیانوس اطلس (Mid-Atlantic Ridge): کشیده و باریک، تراکم متوسط به پایین.
-  R3 - مرکز استرالیا/اقیانوس آرام جنوبی: کم‌تراکم و پراکنده (نمونه درون‌صفحه‌ای / intraplate).
+These three regions were chosen by looking at the raw map (before any clustering):
+  R1 - Indonesia/Philippines (part of the Ring of Fire): very dense, multi-part/elongated
+       along fault lines.
+  R2 - Mid-Atlantic Ridge: elongated and narrow, low-to-medium density.
+  R3 - Central Australia/southern Pacific: low density and scattered (an intraplate sample).
 
-محدوده‌ها به صورت باکس مستطیلی lat/lon تعریف شده‌اند.
+Boundaries are defined as rectangular lat/lon boxes.
+
+Note: the "reason" field is written in Persian on purpose, since it is the actual
+analysis/justification text that answers the assignment's question and is meant to go
+into the report as-is.
 """
 import pandas as pd
 
@@ -42,10 +47,10 @@ def region_summary_table(df: pd.DataFrame) -> pd.DataFrame:
     for key, r in REGIONS.items():
         mask = region_mask(df, key)
         rows.append({
-            "ناحیه": key,
-            "بازه عرض جغرافیایی": f"[{r['lat_min']}, {r['lat_max']}]",
-            "بازه طول جغرافیایی": f"[{r['lon_min']}, {r['lon_max']}]",
-            "تعداد زلزله": int(mask.sum()),
-            "دلیل انتخاب": r["reason"],
+            "region": key,
+            "lat_range": f"[{r['lat_min']}, {r['lat_max']}]",
+            "lon_range": f"[{r['lon_min']}, {r['lon_max']}]",
+            "count": int(mask.sum()),
+            "reason": r["reason"],
         })
     return pd.DataFrame(rows)
