@@ -9,9 +9,8 @@ These three regions were chosen by looking at the raw map (before any clustering
 
 Boundaries are defined as rectangular lat/lon boxes.
 
-Note: the "reason" field is written in Persian on purpose, since it is the actual
-analysis/justification text that answers the assignment's question and is meant to go
-into the report as-is.
+Note: the "reason" field is the actual analysis/justification text that answers the
+assignment's question and is meant to go into the report as-is (English).
 """
 import pandas as pd
 
@@ -19,17 +18,20 @@ REGIONS = {
     "R1_Indonesia_Philippines": {
         "lat_min": -10.0, "lat_max": 20.0,
         "lon_min": 95.0, "lon_max": 130.0,
-        "reason": "بخشی از کمربند آتش اقیانوس آرام؛ انتظار تراکم بسیار بالا و الگوی چندبخشی/کشیده در امتداد گسل‌ها.",
+        "reason": "Part of the Pacific Ring of Fire; expected to show very high density and a "
+                  "multi-part / elongated pattern along fault lines.",
     },
     "R2_MidAtlanticRidge": {
         "lat_min": -40.0, "lat_max": 40.0,
         "lon_min": -40.0, "lon_max": -10.0,
-        "reason": "پشته میان‌اقیانوسی؛ انتظار الگوی کشیده و باریک با تراکم متوسط به پایین در امتداد یک خط مشخص.",
+        "reason": "A mid-ocean ridge; expected to show an elongated, narrow pattern with "
+                  "medium-to-low density along a well-defined line.",
     },
     "R3_CentralAustralia": {
         "lat_min": -30.0, "lat_max": -15.0,
         "lon_min": 120.0, "lon_max": 145.0,
-        "reason": "ناحیه درون‌صفحه‌ای دور از مرز صفحات؛ انتظار تراکم بسیار پایین و پراکندگی نامنظم (نمونه کم‌تراکم).",
+        "reason": "An intraplate region far from plate boundaries; expected to show very low "
+                  "density and irregular scattering (the low-density sample).",
     },
 }
 

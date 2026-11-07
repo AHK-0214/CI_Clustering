@@ -16,79 +16,90 @@ from .config import OUTPUT_DIR, S_BASE
 
 # ---------------------------------------------------------------------
 # Question D - predictions P1 through P4 (must be recorded before seeing any
-# clustering output). Note: the "prediction", "reason" and "rejection_criterion"
-# values are written in Persian on purpose, since they are the actual answer text
-# submitted for the assignment's report; only the dict keys (column labels) are English.
+# clustering output). The "prediction", "reason" and "rejection_criterion" values
+# are the actual answer text submitted for the assignment's report (English).
 # ---------------------------------------------------------------------
 PREDICTIONS = {
     "P1": {
         "prediction": (
-            "ساختار کشیده‌ای که به‌احتمال زیاد بین چند خوشه K-Means (k=12) تقسیم می‌شود، "
-            "پشته میان‌اقیانوسی اطلس (Mid-Atlantic Ridge) است؛ همچنین بخش‌هایی از کمربند آتش "
-            "در امتداد سواحل غربی آمریکای جنوبی و شرق آسیا که طولی و کشیده هستند."
+            "The elongated structure most likely to be split across several K-Means clusters "
+            "(k=12) is the Mid-Atlantic Ridge; also parts of the Ring of Fire along the west "
+            "coast of South America and East Asia, which are long and elongated."
         ),
         "reason": (
-            "K-Means خوشه‌ها را با مرز تصمیم Voronoi حول k مرکز می‌سازد که برای خوشه‌های "
-            "کروی/فشرده مناسب است. یک ساختار باریک و طولانی (مثل یک خط گسل) اگر طولش از قطر "
-            "معمول یک خوشه Voronoi بیشتر باشد، توسط چند مرکز مجاور هم پوشش داده می‌شود و بین "
-            "چند خوشه تکه‌تکه می‌شود."
+            "K-Means builds clusters with a Voronoi decision boundary around k centers, which "
+            "suits compact/spherical clusters. A narrow, elongated structure (such as a fault "
+            "line) whose length exceeds the typical diameter of a Voronoi cell will be covered "
+            "by several neighboring centers and fragmented across multiple clusters."
         ),
         "rejection_criterion": (
-            "اگر پس از اجرا مشاهده شود که کل طول پشته میان‌اقیانوسی در یک یا دو خوشه قرار گرفته "
-            "(و نه در سه خوشه یا بیشتر)، این پیش‌بینی رد می‌شود."
+            "If, after running the algorithm, the entire length of the Mid-Atlantic Ridge is "
+            "found within one or two clusters (rather than three or more), this prediction is "
+            "rejected."
         ),
     },
     "P2": {
         "prediction": (
-            "با افزایش eps از مقدار کوچک به بزرگ، درصد نقاط نویز به‌صورت یکنوا کاهش و اندازه "
-            "بزرگ‌ترین خوشه به‌صورت یکنوا افزایش می‌یابد. در eps بزرگ، به‌دلیل پدیده زنجیره‌ای "
-            "(chaining) بین نواحی با چگالی متفاوت، یک خوشه غول‌پیکر بیشتر نواحی پرتراکم را در "
-            "خود ادغام می‌کند. انتظار نداریم یک eps واحد بتواند هم‌زمان نواحی پرتراکم (مثل R1) و "
-            "کم‌تراکم (مثل R3) را به‌خوبی خوشه‌بندی کند، چون طبق تعریف DBSCAN یک eps سراسری است "
-            "و تفاوت دستوری در چگالی بین نواحی (مشاهده‌شده در فاز ۱-ب) این مصالحه را سخت می‌کند."
+            "As eps increases from a small to a large value, the percentage of noise points "
+            "decreases monotonically and the size of the largest cluster increases "
+            "monotonically. At large eps, because of the chaining phenomenon between regions "
+            "of different density, one giant cluster absorbs most of the dense regions. We do "
+            "not expect a single eps to cluster both dense regions (e.g. R1) and sparse "
+            "regions (e.g. R3) well simultaneously, because by definition DBSCAN uses one "
+            "global eps, and the order-of-magnitude difference in density between regions "
+            "(observed in Phase 1-B) makes this trade-off difficult."
         ),
         "reason": (
-            "DBSCAN نقاط را بر اساس شمارش همسایگان در شعاع ثابت eps هسته‌ای تعریف می‌کند؛ "
-            "افزایش eps شعاع همسایگی هر نقطه را بزرگ‌تر و در نتیجه احتمال رسیدن به آستانه "
-            "min_samples را بیشتر می‌کند، و نیز خوشه‌های مجاور را به هم متصل می‌کند."
+            "DBSCAN defines core points based on counting neighbors within a fixed radius eps; "
+            "increasing eps enlarges each point's neighborhood radius and therefore increases "
+            "the chance of reaching the min_samples threshold, and also connects neighboring "
+            "clusters together."
         ),
         "rejection_criterion": (
-            "اگر در جدول فاز ۳-آ یک بازه از eps پیدا شود که در آن هم درصد نویز در R1 (پرتراکم) پایین "
-            "بماند و هم R3 (کم‌تراکم) به‌طور معقول جدا از نویز باقی بماند، بخش دوم این پیش‌بینی رد می‌شود."
+            "If, in the Phase 3-A table, a range of eps is found in which the noise percentage "
+            "in R1 (dense) stays low AND R3 (sparse) remains reasonably separated from noise, "
+            "the second part of this prediction is rejected."
         ),
     },
     "P3": {
         "prediction": (
-            "Single Link بیشتر مستعد تشکیل یک خوشه بسیار بزرگ و چند خوشه بسیار کوچک (ساختار "
-            "'rich-get-richer') است، در حالی‌که Average Link خوشه‌های متوازن‌تری می‌سازد."
+            "Single Link is more prone to forming one very large cluster and several very "
+            "small clusters (a 'rich-get-richer' structure), whereas Average Link produces "
+            "more balanced clusters."
         ),
         "reason": (
-            "در Single Link فاصله دو خوشه برابر کمینه فاصله بین هر عضو از دو خوشه است؛ این معیار "
-            "نسبت به پدیده زنجیره‌ای بسیار حساس است: کافی است یک مسیر نازک از نقاط نزدیک به هم دو "
-            "توده بزرگ را به هم وصل کند. Average Link از میانگین همه فاصله‌های دوبه‌دو استفاده می‌کند "
-            "که نسبت به چنین پل‌های نازکی مقاوم‌تر است و خوشه‌های فشرده‌تر و متوازن‌تر تولید می‌کند."
+            "In Single Link, the distance between two clusters equals the minimum distance "
+            "between any member of the two clusters; this criterion is very sensitive to the "
+            "chaining phenomenon — a single thin chain of nearby points is enough to connect "
+            "two large masses. Average Link uses the average of all pairwise distances, which "
+            "is more robust to such thin bridges and produces more compact, balanced clusters."
         ),
         "rejection_criterion": (
-            "اگر در فاز ۳-پ توزیع اندازه خوشه‌های Average Link نامتوازن‌تر از Single Link باشد "
-            "(مثلاً واریانس اندازه خوشه بیشتر)، این پیش‌بینی رد می‌شود."
+            "If, in Phase 3-C, the cluster-size distribution of Average Link turns out to be "
+            "more unbalanced than that of Single Link (e.g. higher variance in cluster size), "
+            "this prediction is rejected."
         ),
     },
     "P4": {
         "prediction": (
-            "برای سناریوی الف (منطقه‌بندی)، K-Means را مناسب‌تر می‌دانیم چون هر نقطه را به دقیق یک "
-            "خوشه اختصاص می‌دهد (پوشش ۱۰۰٪) و تعداد مناطق (k) را می‌توان مستقیماً در بازه ۱۰ تا ۲۰ "
-            "تنظیم کرد. برای سناریوی ب (کشف ساختار)، DBSCAN را مناسب‌تر می‌دانیم چون تعداد خوشه‌ها "
-            "را از قبل تحمیل نمی‌کند و امکان نویز گذاشتن نقاط دورافتاده را می‌دهد."
+            "For scenario A (zoning/regionalization), we consider K-Means more suitable "
+            "because it assigns every point to exactly one cluster (100% coverage) and the "
+            "number of regions (k) can be set directly in the range 10 to 20. For scenario B "
+            "(structure discovery), we consider DBSCAN more suitable because it does not "
+            "impose the number of clusters in advance and allows outlier points to be labeled "
+            "as noise."
         ),
         "reason": (
-            "فرض‌های K-Means (خوشه‌های کروی حول مرکز) با هدف سناریوی الف (مناطق قابل‌توصیف و پوشش "
-            "کامل) سازگارتر است؛ فرض DBSCAN (پیوستگی چگالی) با هدف سناریوی ب (کشف کمربندها بدون "
-            "تعیین k) سازگارتر است."
+            "K-Means's assumptions (spherical clusters around a center) are more consistent "
+            "with scenario A's goal (describable regions with full coverage); DBSCAN's "
+            "assumption (density connectivity) is more consistent with scenario B's goal "
+            "(discovering belts without fixing k)."
         ),
         "rejection_criterion": (
-            "اگر در فاز ۴ معلوم شود DBSCAN با تنظیم مناسب eps پوشش نزدیک به کامل و مناطق به همان "
-            "اندازه قابل‌توصیف برای سناریوی الف تولید می‌کند، یا K-Means در کشف کمربندهای غیرکروی "
-            "سناریوی ب عملکرد قابل قبولی دارد، بخش مربوطه این پیش‌بینی رد می‌شود."
+            "If, in Phase 4, it turns out that DBSCAN with a suitable eps produces "
+            "near-complete coverage and regions that are just as describable for scenario A, "
+            "or that K-Means performs acceptably at discovering the non-spherical belts of "
+            "scenario B, the corresponding part of this prediction is rejected."
         ),
     },
 }
@@ -96,27 +107,33 @@ PREDICTIONS = {
 
 # ---------------------------------------------------------------------
 # Question C - explanation of why plain Euclidean distance on lat/lon is misleading.
-# Kept in Persian on purpose: this is the actual answer text for the assignment's report.
+# This is the actual answer text for the assignment's report (English).
 # ---------------------------------------------------------------------
 DISTANCE_EXPLANATION = """
-محاسبه مستقیم فاصله اقلیدسی روی ستون‌های خام Latitude و Longitude گمراه‌کننده است
-زیرا این دو کمیت زاویه‌اند، نه مختصات کارتزین روی یک صفحه مسطح:
+Computing the plain Euclidean distance directly on the raw Latitude and Longitude
+columns is misleading, because these two quantities are angles, not Cartesian
+coordinates on a flat plane:
 
-۱) ناپیوستگی در ۱۸۰ درجه طول جغرافیایی:
-   دو نقطه با طول جغرافیایی ۱۷۹ و ۱۷۹- درجه (مثلاً نزدیک خط تغییر تاریخ در اقیانوس آرام) تنها
-   حدود ۲ درجه (~۲۲۲ کیلومتر) از هم فاصله واقعی دارند، اما فاصله اقلیدسی خام آن‌ها روی محور طول
-   جغرافیایی برابر ۳۵۸ درجه محاسبه می‌شود؛ یعنی تقریباً بیشینه ممکن. این دو نقطه که در واقعیت
-   همسایه‌اند، در این متریک نادرست بسیار دور از هم به نظر می‌رسند.
+1) Discontinuity at 180 degrees longitude:
+   Two points at longitude 179 and -179 degrees (e.g. near the International Date
+   Line in the Pacific Ocean) are only about 2 degrees (~222 km) apart in reality,
+   but their raw Euclidean distance along the longitude axis computes to 358
+   degrees -- nearly the maximum possible value. These two points, which are in
+   fact neighbors, appear to be very far apart under this incorrect metric.
 
-۲) تاب‌خوردگی نزدیک قطب‌ها:
-   طول هر درجه طول جغرافیایی با cos(عرض جغرافیایی) کوچک می‌شود. نزدیک قطب، اختلاف زیاد در طول
-   جغرافیایی می‌تواند فاصله واقعی بسیار کمی را نشان دهد، درحالی‌که فاصله اقلیدسی خام آن را بزرگ
-   محاسبه می‌کند.
+2) Distortion near the poles:
+   The length of one degree of longitude shrinks with cos(latitude). Near the
+   poles, a large difference in longitude can correspond to a very small real
+   distance, while the raw Euclidean distance computes it as large.
 
-نمایش سه‌بعدی روی کره واحد (x=cos φ cos λ, y=cos φ sin λ, z=sin φ) هر دو مشکل را برطرف می‌کند:
-این تبدیل یک نگاشت پیوسته و بدون درز (seamless) از سطح کره به فضای اقلیدسی سه‌بعدی است، بنابراین
-نقاط نزدیک جغرافیایی (از جمله دو طرف نصف‌النهار ۱۸۰ درجه) در این فضا نیز به هم نزدیک‌اند، و فاصله
-اقلیدسی در این فضا (پس از تبدیل به فاصله سطحی با فرمول کمانی) با فاصله واقعی روی کره سازگار است.
+Representing points in 3D on the unit sphere (x = cos(phi) cos(lambda),
+y = cos(phi) sin(lambda), z = sin(phi)) resolves both problems: this
+transformation is a continuous, seamless mapping from the surface of the sphere
+to 3D Euclidean space, so geographically close points (including points on
+either side of the 180-degree meridian) are also close together in this space,
+and the Euclidean distance in this space (after converting it to a surface
+distance with the arc formula) is consistent with the true distance on the
+sphere.
 """.strip()
 
 
