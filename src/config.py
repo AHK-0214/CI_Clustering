@@ -7,7 +7,7 @@ in this file so they stay consistent across the whole project.
 """
 
 # ---- Seed ----
-S_BASE = 629          # s         : last three digits of the student ID
+S_BASE = 429          # s         : last three digits of the student ID
 S_PLUS_1 = S_BASE + 1  # s+1
 S_PLUS_2 = S_BASE + 2  # s+2
 S_PLUS_3 = S_BASE + 3  # s+3
