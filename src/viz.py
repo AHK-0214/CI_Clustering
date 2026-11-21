@@ -174,6 +174,34 @@ def plot_inertia_curve(ks, inertias, save_path=None):
     return fig, ax
 
 
+def plot_chain_example(df, cluster_mask, pair_mask, title, save_path=None):
+    """World map showing (1) all other points in light gray, (2) the giant/chained
+    cluster in a mid-tone orange so its extent is visible, and (3) the specific
+    bridging pair of points (the chaining-effect example) highlighted in red on top."""
+    fig, ax = plt.subplots(figsize=(12, 6))
+    cm = np.asarray(cluster_mask)
+    pm = np.asarray(pair_mask)
+    other = ~cm
+    ax.scatter(df["Longitude"].values[other], df["Latitude"].values[other],
+               s=2, alpha=0.2, color="gray", label=None)
+    ax.scatter(df["Longitude"].values[cm & ~pm], df["Latitude"].values[cm & ~pm],
+               s=6, alpha=0.5, color="tab:orange", label=f"giant cluster (n={int(cm.sum())})")
+    ax.scatter(df["Longitude"].values[pm], df["Latitude"].values[pm],
+               s=90, alpha=1.0, color="red", marker="*", edgecolor="black", linewidth=0.5,
+               label="bridging pair (chaining example)")
+    ax.set_xlim(-180, 180)
+    ax.set_ylim(-90, 90)
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+    ax.set_title(title)
+    ax.legend(loc="lower left", fontsize=8)
+    ax.grid(alpha=0.3)
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return fig, ax
+
+
 def plot_highlighted_points(df, highlight_mask, title, save_path=None):
     """Base world map in light gray, with a highlighted subset of points (e.g. a chain
     of points connecting two dense regions in Single Link) drawn in red."""

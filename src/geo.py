@@ -50,3 +50,25 @@ def great_circle_km(lat1, lon1, lat2, lon2, R: float = EARTH_RADIUS_KM):
     a = np.sin(dphi / 2.0) ** 2 + np.cos(phi1) * np.cos(phi2) * np.sin(dlam / 2.0) ** 2
     a = np.clip(a, 0.0, 1.0)
     return 2.0 * R * np.arcsin(np.sqrt(a))
+
+
+def destination_point(lat_deg, lon_deg, bearing_deg, distance_km, R: float = EARTH_RADIUS_KM):
+    """Given a starting point, a compass bearing (degrees, 0=north/clockwise) and a
+    great-circle distance in km, return the (lat, lon) of the displaced point -- a
+    proper geographic (spherical) displacement, not a flat addition to lat/lon.
+    Used by the bonus "Controlled Perturbation" question (Bonus Q.A) to move points by
+    a given distance on the Earth's surface in a random direction.
+    Vectorized: lat_deg, lon_deg, bearing_deg, distance_km may be scalars or arrays."""
+    phi1 = np.radians(np.asarray(lat_deg, dtype=float))
+    lam1 = np.radians(np.asarray(lon_deg, dtype=float))
+    theta = np.radians(np.asarray(bearing_deg, dtype=float))
+    delta = np.asarray(distance_km, dtype=float) / R  # angular distance
+
+    phi2 = np.arcsin(np.sin(phi1) * np.cos(delta) + np.cos(phi1) * np.sin(delta) * np.cos(theta))
+    lam2 = lam1 + np.arctan2(
+        np.sin(theta) * np.sin(delta) * np.cos(phi1),
+        np.cos(delta) - np.sin(phi1) * np.sin(phi2),
+    )
+    lat2 = np.degrees(phi2)
+    lon2 = (np.degrees(lam2) + 540.0) % 360.0 - 180.0  # normalize to [-180, 180)
+    return lat2, lon2

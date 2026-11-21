@@ -22,6 +22,16 @@ def get_sample_S(df: pd.DataFrame, n: int = SAMPLE_SIZE_S, seed: int = S_BASE) -
     return sample
 
 
+def get_subsample(sample_df: pd.DataFrame, frac: float, seed: int) -> pd.DataFrame:
+    """Draw a random subset of `sample_df` (without replacement), keeping a fraction
+    `frac` of its rows, using `seed`. Used by Phase 4-A's resampling-stability
+    experiment to build the three 80%-of-S subsets (seeds s, s+1, s+2)."""
+    rng = np.random.RandomState(seed)
+    n = int(round(frac * len(sample_df)))
+    chosen_pos = rng.choice(len(sample_df), size=n, replace=False)
+    return sample_df.iloc[chosen_pos].sort_values("record_id").reset_index(drop=True)
+
+
 def labels_for_ids(full_df: pd.DataFrame, full_labels: np.ndarray, record_ids) -> np.ndarray:
     """Given labels produced by a model run on `full_df` (aligned by position with
     full_df's rows), extract the labels corresponding to a list/array of `record_id`

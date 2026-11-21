@@ -226,10 +226,10 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
     far_apart_km = best_d
     highlight_mask = np.zeros(len(sample_S), dtype=bool)
     highlight_mask[list(best_pair)] = True
-    fig_chain, _ = viz_mod.plot_highlighted_points(
-        sample_S, mask_giant,
+    fig_chain, _ = viz_mod.plot_chain_example(
+        sample_S, mask_giant, highlight_mask,
         f"Single Link giant cluster #{giant_cluster} (n={int(mask_giant.sum())}); "
-        f"farthest pair inside it is ~{far_apart_km:.0f} km apart",
+        f"its two farthest member points are ~{far_apart_km:.0f} km apart",
         save_path=os.path.join(OUTPUT_DIR, "04_single_link_chain.png") if save_outputs else None,
     )
 

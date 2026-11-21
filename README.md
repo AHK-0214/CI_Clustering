@@ -10,22 +10,31 @@ on Colab.
 ```
 src/
   config.py    # base seed (s) and constants
-  geo.py       # lat/lon <-> xyz on the unit sphere, chordal <-> surface distance
+  geo.py       # lat/lon <-> xyz on the unit sphere, chordal <-> surface distance,
+               # great-circle distance, and the destination-point (bearing+distance) formula
   data.py      # load/clean the Significant Earthquakes 1965-2016 dataset
   regions.py   # the three sample regions for Phase 1
   density.py   # distance to the k-th neighbor (density metric)
+  sampling.py  # shared sample S, 80%-of-S subsamples, record_id-matched label lookup/ARI
+  models.py    # thin sklearn/scipy wrappers (K-Means, DBSCAN, hierarchical) + shared
+               # cluster-summary / ARI-on-common-ids helpers used by Phases 2-4 and bonus
   viz.py       # map and chart plotting (incl. a real-world map with country borders)
-  phase1.py    # full Phase 1 orchestration
+  phase1.py    # Phase 1 — data understanding & predictions P1-P4
+  phase2.py    # Phase 2 — K-Means
+  phase3.py    # Phase 3 — DBSCAN + hierarchical clustering
+  phase4.py    # Phase 4 — evaluation (4-method comparison on S, resampling stability)
+               # and conclusion (P1-P4 verdicts, final per-scenario recommendation)
+  bonus.py     # Bonus Q.A (Controlled Perturbation) and Q.B (HDBSCAN vs. DBSCAN)
 notebooks/
-  phase1_colab.ipynb
+  project_colab.ipynb
 data/          # dataset is cached here (not in git)
-outputs/       # each phase's output is written here (not in git)
+outputs/       # each phase's output is written here (not in git): outputs/phase1 .. phase4, outputs/bonus
 ```
 
 ## Seed
 
-`S_BASE` in `src/config.py` is the last three digits of the student ID (629).
-`s+1 = 630`, `s+2 = 631`, `s+3 = 632`, computed per the assignment.
+`S_BASE` in `src/config.py` is the last three digits of the student ID (429).
+`s+1 = 430`, `s+2 = 431`, `s+3 = 432`, computed per the assignment.
 
 ## Dataset
 
@@ -39,9 +48,17 @@ The dataset is from Kaggle: `usgs/earthquake-database`. Two ways to make it avai
 ```bash
 pip install -r requirements.txt
 python -m src.phase1
+python -m src.phase2
+python -m src.phase3
+python -m src.phase4   # needs the Phase 2/3 "selected" results; re-runs them if not passed in
+python -m src.bonus    # optional: Bonus Q.A (perturbation) and Q.B (HDBSCAN), independent of each other
 ```
 
-Or on Colab: see `notebooks/phase1_colab.ipynb`.
+Or on Colab: see `notebooks/project_colab.ipynb`, which runs all four phases plus the bonus
+section in order and lets you download everything under `outputs/` as one zip at the end.
+
+See `docs/phase4_and_bonus.md` for what each of Phase 4's and the bonus section's functions
+compute and how their numbers map onto the assignment's questions.
 
 ## Notes on language
 

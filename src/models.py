@@ -5,7 +5,7 @@ for summarizing cluster sizes that Phases 2, 3 and 4 all need.
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans, DBSCAN
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, adjusted_rand_score
 from scipy.cluster.hierarchy import linkage, fcluster
 
 from .geo import latlon_to_xyz, eps_km_to_chordal
@@ -108,6 +108,28 @@ def main_cluster_for_mask(labels: np.ndarray, mask: np.ndarray, noise_label=-1):
     main_cluster = vals[np.argmax(counts)]
     pct_main = 100.0 * counts.max() / n_region
     return main_cluster, pct_noise, pct_main
+
+
+def ari_on_common_ids(df_a: pd.DataFrame, labels_a: np.ndarray,
+                       df_b: pd.DataFrame, labels_b: np.ndarray) -> tuple:
+    """ARI between two labelings that come from two different (overlapping) subsets of
+    records, matched by `record_id`. Returns (ari, n_common). Used by Phase 4-A's
+    resampling-stability experiment, where each pair of 80%-of-S subsets shares only
+    part of their points and cluster numbering is not meant to be aligned."""
+    ids_a = df_a["record_id"].values
+    ids_b = df_b["record_id"].values
+    common = np.intersect1d(ids_a, ids_b)
+    la = labels_for_ids_local(ids_a, labels_a, common)
+    lb = labels_for_ids_local(ids_b, labels_b, common)
+    return float(adjusted_rand_score(la, lb)), int(len(common))
+
+
+def labels_for_ids_local(ids: np.ndarray, labels: np.ndarray, wanted_ids: np.ndarray) -> np.ndarray:
+    """Like sampling.labels_for_ids, but takes the id array directly instead of a
+    full dataframe (small helper to avoid a circular import with sampling.py)."""
+    pos_of_id = pd.Series(np.arange(len(ids)), index=ids)
+    positions = pos_of_id.loc[np.asarray(wanted_ids)].values
+    return np.asarray(labels)[positions]
 
 
 def xyz_of(df) -> np.ndarray:
