@@ -1,4 +1,5 @@
-"""Map and chart plotting functions for Phase 1."""
+"""Map and chart plotting functions for Phases 1-3."""
+import numpy as np
 import matplotlib.pyplot as plt
 from .regions import REGIONS
 
@@ -124,6 +125,70 @@ def plot_p1_predicted_structures(df, save_path=None):
                               fill=False, edgecolor=c, linewidth=2, label=name)
         ax.add_patch(rect)
     ax.legend(loc="lower left", fontsize=7)
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return fig, ax
+
+
+# ---------------------------------------------------------------------
+# Generic clustering map (Phases 2-4): color points by cluster label,
+# show noise (-1) separately in gray.
+# ---------------------------------------------------------------------
+def plot_cluster_map(df, labels, title, save_path=None, noise_label=-1, s=3, alpha=0.5):
+    fig, ax = plt.subplots(figsize=(12, 6))
+    labels = np.asarray(labels)
+    is_noise = labels == noise_label
+    uniq = sorted(set(labels[~is_noise].tolist()))
+    cmap = plt.get_cmap("tab20")
+    for i, cl in enumerate(uniq):
+        mask = labels == cl
+        ax.scatter(df["Longitude"].values[mask], df["Latitude"].values[mask],
+                   s=s, alpha=alpha, color=cmap(i % 20), label=None)
+    if is_noise.any():
+        ax.scatter(df["Longitude"].values[is_noise], df["Latitude"].values[is_noise],
+                   s=s, alpha=0.3, color="lightgray", marker="x", label=f"noise (n={int(is_noise.sum())})")
+        ax.legend(loc="lower left", fontsize=8)
+    ax.set_xlim(-180, 180)
+    ax.set_ylim(-90, 90)
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+    ax.set_title(title)
+    ax.grid(alpha=0.3)
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return fig, ax
+
+
+def plot_inertia_curve(ks, inertias, save_path=None):
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.plot(ks, inertias, marker="o")
+    ax.set_xlabel("k")
+    ax.set_ylabel("Inertia (sum of squared distances to centers)")
+    ax.set_title("K-Means inertia vs. k (3D unit-sphere coordinates, n_init=10)")
+    ax.grid(alpha=0.3)
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return fig, ax
+
+
+def plot_highlighted_points(df, highlight_mask, title, save_path=None):
+    """Base world map in light gray, with a highlighted subset of points (e.g. a chain
+    of points connecting two dense regions in Single Link) drawn in red."""
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.scatter(df["Longitude"].values, df["Latitude"].values, s=2, alpha=0.2, color="gray")
+    hm = np.asarray(highlight_mask)
+    ax.scatter(df["Longitude"].values[hm], df["Latitude"].values[hm], s=14, alpha=0.9,
+               color="red", marker="o", label=f"highlighted (n={int(hm.sum())})")
+    ax.set_xlim(-180, 180)
+    ax.set_ylim(-90, 90)
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+    ax.set_title(title)
+    ax.legend(loc="lower left", fontsize=8)
+    ax.grid(alpha=0.3)
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
