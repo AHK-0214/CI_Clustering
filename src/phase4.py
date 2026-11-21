@@ -94,15 +94,15 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
         })
     qa_summary_table = pd.DataFrame(qa_rows)
 
-    # same-extent maps for all four
+    # same-extent maps for all four, with the Phase-1 regions overlaid so the four
+    # methods' treatment of the same dense/sparse structures can be compared visually
     fig_methods = {}
     for name, (labels, noise_label) in methods.items():
         short = name.split(" (")[0].replace(" ", "_")
         fig, _ = viz_mod.plot_cluster_map(
             sample_S, labels, f"{name} - labels on sample S",
             save_path=os.path.join(OUTPUT_DIR, f"01_{short}.png") if save_outputs else None,
-            noise_label=noise_label,
-            show_regions=True,
+            noise_label=noise_label, show_regions=True,
         )
         fig_methods[name] = fig
 
@@ -198,19 +198,24 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             f"{r['method']}: mean={r['mean_ARI']:.3f}, range={r['range_ARI']:.3f}"
             for _, r in stability_summary_table.iterrows()
         ) + f". In this experiment, {most_stable} was the most stable under 80% resampling "
-        f"and {least_stable} the least. A plausible mechanism: at every iteration K-Means "
-        f"recomputes each cluster's center as the *mean* of all the points currently "
-        f"assigned to it, so a single center summarizes the whole cluster rather than any "
-        f"one point in it -- removing or adding a handful of points out of an 80% resample "
-        f"barely moves that mean. K-Means therefore re-fits its k=12 centers on whichever "
-        f"80% of points is present, and because the centers move smoothly as points are "
-        f"added/removed, the resulting Voronoi partition changes gradually. Single Link, "
-        f"by contrast, depends on the single closest pair bridging two groups at each "
-        f"merge step, so removing or keeping a handful of 'bridge' points can flip whether "
-        f"two large groups merge into one cluster or stay separate, which is a much more "
-        f"discontinuous dependence on exactly which points are sampled. Average Link's "
-        f"mean-distance criterion sits in between, averaging over many pairs and therefore "
-        f"being less sensitive to any single point's presence than Single Link. Higher "
+        f"(mean ARI={stability_summary_table.set_index('method').loc[most_stable, 'mean_ARI']:.3f}) "
+        f"and {least_stable} the least "
+        f"(mean ARI={stability_summary_table.set_index('method').loc[least_stable, 'mean_ARI']:.3f}). "
+        f"A plausible mechanism: each K-Means center is the *mean* of every point currently "
+        f"assigned to its cluster, so it is a summary of a large fraction of the whole "
+        f"(sub)dataset, not of any one point; removing or adding a handful of points out of "
+        f"thousands barely moves this average, so the k=12 centers -- and the Voronoi "
+        f"partition they define -- move only gradually as 20% of the points are swapped out. "
+        f"Single Link, by contrast, depends on the single closest pair bridging two groups at "
+        f"each merge step, so it depends on specific individual points rather than an average "
+        f"over the whole sample: removing or keeping a handful of 'bridge' points can flip "
+        f"whether two large groups merge into one cluster or stay separate, a much more "
+        f"discontinuous dependence on exactly which points happen to be sampled. Average "
+        f"Link's mean-distance-between-clusters criterion sits in between: it still rebuilds "
+        f"the full dendrogram from scratch on each subset (unlike K-Means, it has no "
+        f"incrementally-updated summary statistic playing the role of a center), but "
+        f"averaging over every cross-cluster pair at each merge makes any single pair's "
+        f"presence or absence less decisive than it is for Single Link. Higher "
         f"stability here is a property of the method's sensitivity to the input sample, not "
         f"a judgment of fit for either project scenario: a very stable method can still "
         f"produce clusters that are unbalanced or too coarse for scenario A, or that merge "
@@ -284,6 +289,15 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
     ]
     verdict_table = pd.DataFrame(verdict_rows)
 
+    # Coefficient of variation (CV = std/mean of cluster sizes; see src/phase3.py for the
+    # definition) of the SELECTED K-Means output on the FULL dataset, so it can be quoted
+    # side by side with Phase 3-C's Single/Average Link CVs (computed on S, per the
+    # assignment's restriction -- see the evidence string below for why).
+    kmeans_sizes_full = models_mod.cluster_size_table(kmeans_full_labels, noise_label=-999)["size"]
+    cv_kmeans_full = float(kmeans_sizes_full.std() / kmeans_sizes_full.mean())
+    single_largest_n = int(phase3_results["size_single"]["size"].iloc[0])
+    single_largest_share = 100.0 * single_largest_n / len(sample_S)
+
     final_recommendation = {
         "scenario_A": {
             "algorithm": f"K-Means, k={kmeans_final_k}",
@@ -292,20 +306,19 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             "evidence": [
                 f"100% coverage on both the full data and on S (qa_summary_table), which "
                 f"scenario A's 'every earthquake assigned to one region' requirement needs "
-                f"directly -- DBSCAN and the two hierarchical runs either leave noise or are "
-                f"only defined on the 2000-point sample S. Even if Single Link and Average "
-                f"Link were instead run on the full dataset (not just S), this would not "
-                f"close the gap for scenario A: on S, Single Link's size coefficient of "
-                f"variation is already {phase3_results['cv_single']:.2f} with one giant "
-                f"cluster of {int(phase3_results['size_single']['size'].max())} of "
-                f"{len(sample_S)} points (Phase 3-C/D), i.e. a single dominant, "
-                f"geographically incoherent cluster that already violates scenario A's "
-                f"'describable zones' requirement at sample scale and would only chain "
-                f"further on denser full data; Average Link is more balanced "
-                f"(CV={phase3_results['cv_average']:.2f}) but still gives no numerical "
-                f"guarantee against merging distinct Phase-1 regions the way K-Means' fixed "
-                f"k=12 Voronoi partition does, so neither hierarchical method clearly "
-                f"improves on K-Means for scenario A.",
+                f"directly. The hierarchical alternatives cannot offer this at project "
+                f"scale: the assignment deliberately restricts Single/Average Link to the "
+                f"2000-point sample S rather than the full {len(df)}-point dataset, "
+                f"precisely because naive hierarchical clustering's memory/time cost grows "
+                f"too fast with n to run directly on data this size. Even on S, Single "
+                f"Link's single largest cluster already swallows {single_largest_n} of "
+                f"S's {len(sample_S)} points ({single_largest_share:.1f}%, "
+                f"CV={phase3_results['cv_single']:.2f} -- see Phase 3-C), far too "
+                f"unbalanced to read as scenario A's 10-20 describable zones; Average Link "
+                f"is more balanced (CV={phase3_results['cv_average']:.2f}) but still "
+                f"clearly more uneven than K-Means's own {kmeans_final_k} zones on the "
+                f"FULL data (CV={cv_kmeans_full:.2f}), while also, unlike K-Means, not "
+                f"being defined on the full dataset at all without first subsampling it.",
                 f"k={kmeans_final_k} sits inside the requested 10-20 zone range and keeps "
                 f"zones at a size an organization can still describe individually (Phase "
                 f"2-B); the inertia/Silhouette curves do not pick a sharper optimum on their "
@@ -323,19 +336,21 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             "evidence": [
                 f"Does not require fixing the number of clusters in advance, matching "
                 f"scenario B's goal of discovering belts without a preset k. Hierarchical "
-                f"methods also avoid fixing k upfront (a dendrogram can be cut by a distance "
-                f"threshold instead of a target cluster count), but each available stopping "
-                f"rule brings its own constraint that makes it a worse fit here than DBSCAN: "
-                f"cutting Single Link at a distance threshold does not fix its chaining "
-                f"problem (Phase 3-D) -- a thin bridge of points still lets two separate "
-                f"belts merge before an unrelated, truly distant region does, so no single "
-                f"distance threshold is safe; cutting Average Link at a threshold still "
-                f"forces every point into some cluster, with no way to label sparse, "
-                f"isolated events as noise the way scenario B explicitly allows; and both "
-                f"hierarchical methods were only run on the 2000-point sample S in this "
-                f"project (an O(n^2) distance-matrix cost that is impractical on the full "
-                f"dataset), so neither offers the full-data, density-adaptive, "
-                f"noise-aware belt discovery that DBSCAN provides directly.",
+                f"clustering can also avoid a preset k by cutting the dendrogram with a "
+                f"stopping rule other than a target cluster count (e.g. a fixed "
+                f"distance/height threshold, or an inconsistency-coefficient rule), but "
+                f"each such alternative carries a constraint DBSCAN avoids: a fixed-height "
+                f"cut is exactly as arbitrary a single global parameter as DBSCAN's eps, "
+                f"with no mechanism of its own for leaving genuinely sparse points "
+                f"unlabeled as noise -- every leaf still ends up inside some cluster at any "
+                f"height; an inconsistency-coefficient cut still inherits whichever linkage "
+                f"method built the tree, so it remains just as exposed to Single Link's "
+                f"chaining effect (P3, Phase 3-C/D) or to Average Link's smaller-but-still-"
+                f"present imbalance; and, as above, neither scales past the "
+                f"{len(sample_S)}-point sample S the way DBSCAN runs directly on the full "
+                f"{len(df)}-point dataset. DBSCAN's density-reachability definition, by "
+                f"contrast, produces noise as a first-class, already-built-in output and "
+                f"runs on the full dataset without subsampling.",
                 f"Explicitly separates sparse/outlier events as noise instead of forcing "
                 f"them into the nearest group (Phase 3 figs.), which is the behavior "
                 f"scenario B explicitly allows and K-Means cannot offer.",

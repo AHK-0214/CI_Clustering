@@ -75,7 +75,7 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
         fig, _ = viz_mod.plot_cluster_map(
             df, m.labels_, f"DBSCAN eps={eps_km} km, min_samples={MIN_SAMPLES}",
             save_path=os.path.join(OUTPUT_DIR, f"01_dbscan_eps{eps_km}.png") if save_outputs else None,
-            show_regions=True,
+            show_regions=True,  # Question B reads per-region noise/merging directly off these boxes
         )
         fig_dbscan[eps_km] = fig
 
@@ -132,46 +132,74 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             qb_good_eps = eps_km
             break
 
-    max_noise_per_eps = qb_table.groupby("eps_km")["pct_noise"].max()
-    min_noise_per_eps = qb_table.groupby("eps_km")["pct_noise"].min()
+    # pull out the actual per-region noise numbers at each tested eps, for use in the
+    # discussion text below (so the conclusion quotes this project's own output numbers
+    # instead of describing the trend only qualitatively)
+    def _region_noise_at(eps_km):
+        sub = qb_table[qb_table["eps_km"] == eps_km].set_index("region")
+        return {key: float(sub.loc[key, "pct_noise"]) for key in regions_mod.REGIONS}
+
+    noise_by_eps = {eps_km: _region_noise_at(eps_km) for eps_km in EPS_VALUES_KM}
+    region_keys = list(regions_mod.REGIONS.keys())
 
     if qb_good_eps is not None:
-        sub_good = qb_table[qb_table["eps_km"] == qb_good_eps]
+        n = noise_by_eps[qb_good_eps]
         qb_conclusion = (
             f"Criterion for 'good': noise below {GOOD_ENOUGH_NOISE_THRESHOLD_PCT:.0f}% in "
             f"every one of the three Phase-1 regions, with no two regions sharing the same "
             f"main cluster. eps={qb_good_eps} km satisfies this among the tested values, "
-            f"with per-region noise ranging from {sub_good['pct_noise'].min():.1f}% to "
-            f"{sub_good['pct_noise'].max():.1f}% (see the per-region table for each "
-            f"region's exact figure)."
+            f"with region noise of " + ", ".join(f"{k}={n[k]:.1f}%" for k in region_keys) + "."
         )
         final_eps_b = qb_good_eps
     else:
+        small_eps, large_eps = EPS_VALUES_KM[0], EPS_VALUES_KM[-1]
+        n_small, n_large = noise_by_eps[small_eps], noise_by_eps[large_eps]
+        sparsest_region = max(region_keys, key=lambda k: n_small[k])
+        densest_region = min(region_keys, key=lambda k: n_small[k])
         qb_conclusion = (
             f"Criterion for 'good': noise below {GOOD_ENOUGH_NOISE_THRESHOLD_PCT:.0f}% in "
             f"every one of the three Phase-1 regions, with no two regions sharing the same "
-            f"main cluster. None of the tested eps values satisfies this simultaneously: "
-            f"at eps={EPS_VALUES_KM[0]} km the worst-affected region reaches "
-            f"{max_noise_per_eps[EPS_VALUES_KM[0]]:.1f}% noise (consistent with the "
-            f"larger 10th-neighbor distances found for the sparse region in Phase 1-B), "
-            f"while at eps={EPS_VALUES_KM[-1]} km per-region noise drops to as low as "
-            f"{min_noise_per_eps[EPS_VALUES_KM[-1]]:.1f}% but regions start sharing a main "
-            f"cluster instead -- the gap between within-region and between-region neighbor "
-            f"distances is not large enough for one global eps to separate both scales at "
-            f"once."
+            f"main cluster. None of the tested eps values satisfies this simultaneously: at "
+            f"the smallest tested eps={small_eps} km, {sparsest_region} is left at "
+            f"{n_small[sparsest_region]:.1f}% noise while {densest_region} is already down to "
+            f"{n_small[densest_region]:.1f}% noise -- consistent with the roughly two-"
+            f"orders-of-magnitude gap in 10th-neighbor distance found between the dense and "
+            f"sparse Phase-1 regions (Phase 1-B). At the largest tested eps={large_eps} km, "
+            f"noise drops to " + ", ".join(f"{k}={n_large[k]:.1f}%" for k in region_keys) +
+            f", but by then " +
+            (f"the regions sharing a main cluster are: " +
+             "; ".join(f"{row['region']} with {row['shared_main_cluster_with']}"
+                       for _, row in qb_table[(qb_table['eps_km'] == large_eps) &
+                                               qb_table['shared_main_cluster_with'].notna()].iterrows())
+             if qb_table[(qb_table['eps_km'] == large_eps) & qb_table['shared_main_cluster_with'].notna()].shape[0] > 0
+             else "the dense region's main cluster has already grown enough to risk merging with others") +
+            f" -- so the gap between within-region and between-region neighbor distances is "
+            f"not large enough for one global eps to separate both scales at once."
         )
         # fall back to the eps with the lowest *maximum* per-region noise, as the
         # best available compromise to report for scenario B
+        max_noise_per_eps = qb_table.groupby("eps_km")["pct_noise"].max()
         final_eps_b = int(max_noise_per_eps.idxmin())
 
+    final_region_noise = noise_by_eps[final_eps_b]
     qb_final_eps_reason = (
         f"For scenario B we select eps={final_eps_b} km: among the tested values it gives "
-        f"the best available balance for the three Phase-1 regions, with a worst-case "
-        f"per-region noise of {max_noise_per_eps[final_eps_b]:.1f}% and a best-case of "
-        f"{min_noise_per_eps[final_eps_b]:.1f}% (see the per-region table), which is the "
-        f"closest match to scenario B's goal of finding belts/clusters without forcing "
-        f"every point into a cluster."
+        f"the best available balance for the three Phase-1 regions, with region noise of " +
+        ", ".join(f"{k}={final_region_noise[k]:.1f}%" for k in region_keys) +
+        f" (per-region table above), which is the closest match to scenario B's goal of "
+        f"finding belts/clusters without forcing every point into a cluster."
     )
+
+    # a dedicated map for the eps chosen for scenario B, with the Phase-1 regions overlaid,
+    # in case it isn't one of the two eps values already plotted for Question A
+    fig_qb_selected = fig_dbscan.get(final_eps_b)
+    if fig_qb_selected is None:
+        fig_qb_selected, _ = viz_mod.plot_cluster_map(
+            df, dbscan_models[final_eps_b].labels_,
+            f"DBSCAN eps={final_eps_b} km, min_samples={MIN_SAMPLES} (selected for scenario B)",
+            save_path=os.path.join(OUTPUT_DIR, f"01b_dbscan_eps{final_eps_b}_scenarioB.png") if save_outputs else None,
+            show_regions=True,
+        )
 
     # ---------------------------------------------------------------
     # Question C - hierarchical clustering on S only
@@ -195,6 +223,13 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
         show_regions=True,
     )
 
+    # Coefficient of variation (CV) of the cluster-size distribution = std / mean of the
+    # cluster sizes: a single scale-free number summarizing how *unbalanced* a set of
+    # clusters is, independent of how many points or clusters there are. CV=0 would mean
+    # every cluster has exactly the same size; the larger CV is, the more the sizes are
+    # dominated by a few outlier (usually one giant) clusters relative to the rest -- which
+    # is exactly the "one huge cluster + many tiny remainders" pattern P3 predicts for
+    # Single Link, so CV is a convenient single number to compare the two methods by.
     cv_single = float(size_single["size"].std() / size_single["size"].mean())
     cv_average = float(size_average["size"].std() / size_average["size"].mean())
     more_unbalanced = "Single Link" if cv_single > cv_average else "Average Link"
@@ -286,7 +321,8 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
         "giant_cluster_single": giant_cluster, "chain_far_apart_km": far_apart_km,
         "qd_discussion": qd_discussion,
         "figures": {
-            "dbscan": fig_dbscan, "single_link": fig_single, "average_link": fig_average,
+            "dbscan": fig_dbscan, "dbscan_scenario_b_selected": fig_qb_selected,
+            "single_link": fig_single, "average_link": fig_average,
             "chain": fig_chain,
         },
     }

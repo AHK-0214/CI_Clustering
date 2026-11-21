@@ -132,10 +132,46 @@ def plot_p1_predicted_structures(df, save_path=None):
 
 
 # ---------------------------------------------------------------------
+# Region-rectangle overlay, reusable on top of ANY map (Phases 2-4, bonus):
+# draws the same three Phase-1 region boxes used in plot_world_map_with_regions,
+# so a cluster map can be read directly against the regions chosen in Phase 1.
+# ---------------------------------------------------------------------
+REGION_COLORS = ["red", "green", "purple"]
+
+
+def overlay_regions(ax, colors=None, linewidth=2.0, fontsize=8):
+    """Draw the three Phase-1 region rectangles on an existing Axes `ax` (any map
+    already in lon/lat space) and add a small legend entry for each. Safe to call on
+    a map built from a sample (e.g. sample_S) rather than the full dataset: the boxes
+    are fixed lat/lon boundaries, independent of which points are actually plotted."""
+    colors = colors or REGION_COLORS
+    handles = []
+    for (key, r), c in zip(REGIONS.items(), colors):
+        width = r["lon_max"] - r["lon_min"]
+        height = r["lat_max"] - r["lat_min"]
+        rect = plt.Rectangle((r["lon_min"], r["lat_min"]), width, height,
+                              fill=False, edgecolor=c, linewidth=linewidth,
+                              linestyle="--", label=key, zorder=5)
+        ax.add_patch(rect)
+        handles.append(rect)
+    return handles
+
+
+def _add_region_legend(ax, extra_handles=None, fontsize=8):
+    """Merge the plot's existing legend handles (if any) with the region-rectangle
+    handles so both show up together in one legend box."""
+    existing_handles, existing_labels = ax.get_legend_handles_labels()
+    handles = existing_handles + (extra_handles or [])
+    if handles:
+        ax.legend(handles=handles, loc="lower left", fontsize=fontsize)
+
+
+# ---------------------------------------------------------------------
 # Generic clustering map (Phases 2-4): color points by cluster label,
 # show noise (-1) separately in gray.
 # ---------------------------------------------------------------------
-def plot_cluster_map(df, labels, title, save_path=None, noise_label=-1, s=3, alpha=0.5):
+def plot_cluster_map(df, labels, title, save_path=None, noise_label=-1, s=3, alpha=0.5,
+                      show_regions=False):
     fig, ax = plt.subplots(figsize=(12, 6))
     labels = np.asarray(labels)
     is_noise = labels == noise_label
@@ -148,12 +184,14 @@ def plot_cluster_map(df, labels, title, save_path=None, noise_label=-1, s=3, alp
     if is_noise.any():
         ax.scatter(df["Longitude"].values[is_noise], df["Latitude"].values[is_noise],
                    s=s, alpha=0.3, color="lightgray", marker="x", label=f"noise (n={int(is_noise.sum())})")
-        ax.legend(loc="lower left", fontsize=8)
+    region_handles = overlay_regions(ax) if show_regions else None
+    if is_noise.any() or show_regions:
+        _add_region_legend(ax, region_handles)
     ax.set_xlim(-180, 180)
     ax.set_ylim(-90, 90)
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
-    ax.set_title(title)
+    ax.set_title(title + (" (Phase-1 regions overlaid)" if show_regions else ""))
     ax.grid(alpha=0.3)
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
@@ -202,7 +240,7 @@ def plot_chain_example(df, cluster_mask, pair_mask, title, save_path=None):
     return fig, ax
 
 
-def plot_highlighted_points(df, highlight_mask, title, save_path=None):
+def plot_highlighted_points(df, highlight_mask, title, save_path=None, show_regions=False):
     """Base world map in light gray, with a highlighted subset of points (e.g. a chain
     of points connecting two dense regions in Single Link) drawn in red."""
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -210,12 +248,13 @@ def plot_highlighted_points(df, highlight_mask, title, save_path=None):
     hm = np.asarray(highlight_mask)
     ax.scatter(df["Longitude"].values[hm], df["Latitude"].values[hm], s=14, alpha=0.9,
                color="red", marker="o", label=f"highlighted (n={int(hm.sum())})")
+    region_handles = overlay_regions(ax) if show_regions else None
+    _add_region_legend(ax, region_handles)
     ax.set_xlim(-180, 180)
     ax.set_ylim(-90, 90)
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
-    ax.set_title(title)
-    ax.legend(loc="lower left", fontsize=8)
+    ax.set_title(title + (" (Phase-1 regions overlaid)" if show_regions else ""))
     ax.grid(alpha=0.3)
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")

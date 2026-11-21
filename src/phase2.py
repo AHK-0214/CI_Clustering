@@ -170,6 +170,7 @@ def run_phase2(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
     fig_selected, _ = viz_mod.plot_cluster_map(
         df, final_labels, f"K-Means selected output (k={FINAL_K}, 3D coords, seed={S_BASE})",
         save_path=os.path.join(OUTPUT_DIR, "03_kmeans_selected.png") if save_outputs else None,
+        show_regions=True,  # so the split of e.g. R1 across clusters (discussed below) is visible directly
     )
 
     # ---------------------------------------------------------------

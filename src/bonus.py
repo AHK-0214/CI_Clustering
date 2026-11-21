@@ -286,7 +286,7 @@ def run_bonus_qb(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
     fig_db, _ = viz_mod.plot_cluster_map(
         sample_S, db.labels_, f"DBSCAN eps={eps_km_S} km, min_samples=10 (sample S)",
         save_path=os.path.join(OUTPUT_DIR, "02_dbscan_S.png") if save_outputs else None,
-        show_regions=True,
+        show_regions=True,  # the per-region noise table below reads directly off these boxes
     )
     fig_hdb, _ = viz_mod.plot_cluster_map(
         sample_S, hdb.labels_,
