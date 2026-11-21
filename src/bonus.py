@@ -177,6 +177,7 @@ def run_bonus_qa(df: pd.DataFrame = None, phase2_results: dict = None,
             f"Example perturbed point whose cluster membership changed (record_id="
             f"{int(df['record_id'].iloc[example_idx])})",
             save_path=os.path.join(OUTPUT_DIR, "01_perturbation_example.png") if save_outputs else None,
+            show_regions=True,
         )
 
     more_robust = "K-Means" if ari_kmeans > ari_dbscan else "DBSCAN"
@@ -285,11 +286,13 @@ def run_bonus_qb(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
     fig_db, _ = viz_mod.plot_cluster_map(
         sample_S, db.labels_, f"DBSCAN eps={eps_km_S} km, min_samples=10 (sample S)",
         save_path=os.path.join(OUTPUT_DIR, "02_dbscan_S.png") if save_outputs else None,
+        show_regions=True,
     )
     fig_hdb, _ = viz_mod.plot_cluster_map(
         sample_S, hdb.labels_,
         f"HDBSCAN min_cluster_size={HDBSCAN_MIN_CLUSTER_SIZE} (sample S)",
         save_path=os.path.join(OUTPUT_DIR, "03_hdbscan_S.png") if save_outputs else None,
+        show_regions=True,
     )
 
     # ---- per-Phase-1-region noise% for both methods, on S ----

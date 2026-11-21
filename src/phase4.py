@@ -102,6 +102,7 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             sample_S, labels, f"{name} - labels on sample S",
             save_path=os.path.join(OUTPUT_DIR, f"01_{short}.png") if save_outputs else None,
             noise_label=noise_label,
+            show_regions=True,
         )
         fig_methods[name] = fig
 
@@ -197,9 +198,13 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             f"{r['method']}: mean={r['mean_ARI']:.3f}, range={r['range_ARI']:.3f}"
             for _, r in stability_summary_table.iterrows()
         ) + f". In this experiment, {most_stable} was the most stable under 80% resampling "
-        f"and {least_stable} the least. A plausible mechanism: K-Means re-fits k=12 centers "
-        f"on whichever 80% of points is present, and centers move smoothly as points are "
-        f"added/removed, so the resulting Voronoi partition changes gradually; Single Link, "
+        f"and {least_stable} the least. A plausible mechanism: at every iteration K-Means "
+        f"recomputes each cluster's center as the *mean* of all the points currently "
+        f"assigned to it, so a single center summarizes the whole cluster rather than any "
+        f"one point in it -- removing or adding a handful of points out of an 80% resample "
+        f"barely moves that mean. K-Means therefore re-fits its k=12 centers on whichever "
+        f"80% of points is present, and because the centers move smoothly as points are "
+        f"added/removed, the resulting Voronoi partition changes gradually. Single Link, "
         f"by contrast, depends on the single closest pair bridging two groups at each "
         f"merge step, so removing or keeping a handful of 'bridge' points can flip whether "
         f"two large groups merge into one cluster or stay separate, which is a much more "
@@ -288,7 +293,19 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
                 f"100% coverage on both the full data and on S (qa_summary_table), which "
                 f"scenario A's 'every earthquake assigned to one region' requirement needs "
                 f"directly -- DBSCAN and the two hierarchical runs either leave noise or are "
-                f"only defined on the 2000-point sample S.",
+                f"only defined on the 2000-point sample S. Even if Single Link and Average "
+                f"Link were instead run on the full dataset (not just S), this would not "
+                f"close the gap for scenario A: on S, Single Link's size coefficient of "
+                f"variation is already {phase3_results['cv_single']:.2f} with one giant "
+                f"cluster of {int(phase3_results['size_single']['size'].max())} of "
+                f"{len(sample_S)} points (Phase 3-C/D), i.e. a single dominant, "
+                f"geographically incoherent cluster that already violates scenario A's "
+                f"'describable zones' requirement at sample scale and would only chain "
+                f"further on denser full data; Average Link is more balanced "
+                f"(CV={phase3_results['cv_average']:.2f}) but still gives no numerical "
+                f"guarantee against merging distinct Phase-1 regions the way K-Means' fixed "
+                f"k=12 Voronoi partition does, so neither hierarchical method clearly "
+                f"improves on K-Means for scenario A.",
                 f"k={kmeans_final_k} sits inside the requested 10-20 zone range and keeps "
                 f"zones at a size an organization can still describe individually (Phase "
                 f"2-B); the inertia/Silhouette curves do not pick a sharper optimum on their "
@@ -305,7 +322,20 @@ def run_phase4(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             "parameters": f"min_samples=10, eps_km={dbscan_eps_selected}",
             "evidence": [
                 f"Does not require fixing the number of clusters in advance, matching "
-                f"scenario B's goal of discovering belts without a preset k.",
+                f"scenario B's goal of discovering belts without a preset k. Hierarchical "
+                f"methods also avoid fixing k upfront (a dendrogram can be cut by a distance "
+                f"threshold instead of a target cluster count), but each available stopping "
+                f"rule brings its own constraint that makes it a worse fit here than DBSCAN: "
+                f"cutting Single Link at a distance threshold does not fix its chaining "
+                f"problem (Phase 3-D) -- a thin bridge of points still lets two separate "
+                f"belts merge before an unrelated, truly distant region does, so no single "
+                f"distance threshold is safe; cutting Average Link at a threshold still "
+                f"forces every point into some cluster, with no way to label sparse, "
+                f"isolated events as noise the way scenario B explicitly allows; and both "
+                f"hierarchical methods were only run on the 2000-point sample S in this "
+                f"project (an O(n^2) distance-matrix cost that is impractical on the full "
+                f"dataset), so neither offers the full-data, density-adaptive, "
+                f"noise-aware belt discovery that DBSCAN provides directly.",
                 f"Explicitly separates sparse/outlier events as noise instead of forcing "
                 f"them into the nearest group (Phase 3 figs.), which is the behavior "
                 f"scenario B explicitly allows and K-Means cannot offer.",

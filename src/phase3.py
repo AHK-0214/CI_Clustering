@@ -75,6 +75,7 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
         fig, _ = viz_mod.plot_cluster_map(
             df, m.labels_, f"DBSCAN eps={eps_km} km, min_samples={MIN_SAMPLES}",
             save_path=os.path.join(OUTPUT_DIR, f"01_dbscan_eps{eps_km}.png") if save_outputs else None,
+            show_regions=True,
         )
         fig_dbscan[eps_km] = fig
 
@@ -131,11 +132,18 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             qb_good_eps = eps_km
             break
 
+    max_noise_per_eps = qb_table.groupby("eps_km")["pct_noise"].max()
+    min_noise_per_eps = qb_table.groupby("eps_km")["pct_noise"].min()
+
     if qb_good_eps is not None:
+        sub_good = qb_table[qb_table["eps_km"] == qb_good_eps]
         qb_conclusion = (
             f"Criterion for 'good': noise below {GOOD_ENOUGH_NOISE_THRESHOLD_PCT:.0f}% in "
             f"every one of the three Phase-1 regions, with no two regions sharing the same "
-            f"main cluster. eps={qb_good_eps} km satisfies this among the tested values."
+            f"main cluster. eps={qb_good_eps} km satisfies this among the tested values, "
+            f"with per-region noise ranging from {sub_good['pct_noise'].min():.1f}% to "
+            f"{sub_good['pct_noise'].max():.1f}% (see the per-region table for each "
+            f"region's exact figure)."
         )
         final_eps_b = qb_good_eps
     else:
@@ -143,23 +151,26 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
             f"Criterion for 'good': noise below {GOOD_ENOUGH_NOISE_THRESHOLD_PCT:.0f}% in "
             f"every one of the three Phase-1 regions, with no two regions sharing the same "
             f"main cluster. None of the tested eps values satisfies this simultaneously: "
-            f"small eps leaves the sparser region(s) mostly noise (consistent with the "
+            f"at eps={EPS_VALUES_KM[0]} km the worst-affected region reaches "
+            f"{max_noise_per_eps[EPS_VALUES_KM[0]]:.1f}% noise (consistent with the "
             f"larger 10th-neighbor distances found for the sparse region in Phase 1-B), "
-            f"while an eps large enough to pull the sparse region out of noise is also "
-            f"large enough to merge the dense region's main cluster with another region's, "
-            f"because the gap between within-region and between-region neighbor distances "
-            f"is not large enough for one global eps to separate both scales at once."
+            f"while at eps={EPS_VALUES_KM[-1]} km per-region noise drops to as low as "
+            f"{min_noise_per_eps[EPS_VALUES_KM[-1]]:.1f}% but regions start sharing a main "
+            f"cluster instead -- the gap between within-region and between-region neighbor "
+            f"distances is not large enough for one global eps to separate both scales at "
+            f"once."
         )
         # fall back to the eps with the lowest *maximum* per-region noise, as the
         # best available compromise to report for scenario B
-        max_noise_per_eps = qb_table.groupby("eps_km")["pct_noise"].max()
         final_eps_b = int(max_noise_per_eps.idxmin())
 
     qb_final_eps_reason = (
         f"For scenario B we select eps={final_eps_b} km: among the tested values it gives "
-        f"the best available balance for the three Phase-1 regions "
-        f"(see the per-region table), which is the closest match to scenario B's goal of "
-        f"finding belts/clusters without forcing every point into a cluster."
+        f"the best available balance for the three Phase-1 regions, with a worst-case "
+        f"per-region noise of {max_noise_per_eps[final_eps_b]:.1f}% and a best-case of "
+        f"{min_noise_per_eps[final_eps_b]:.1f}% (see the per-region table), which is the "
+        f"closest match to scenario B's goal of finding belts/clusters without forcing "
+        f"every point into a cluster."
     )
 
     # ---------------------------------------------------------------
@@ -176,10 +187,12 @@ def run_phase3(df: pd.DataFrame = None, sample_S: pd.DataFrame = None,
     fig_single, _ = viz_mod.plot_cluster_map(
         sample_S, labels_single, f"Single Link, cut at {HIER_N_CLUSTERS} clusters (sample S)",
         save_path=os.path.join(OUTPUT_DIR, "02_single_link.png") if save_outputs else None,
+        show_regions=True,
     )
     fig_average, _ = viz_mod.plot_cluster_map(
         sample_S, labels_average, f"Average Link, cut at {HIER_N_CLUSTERS} clusters (sample S)",
         save_path=os.path.join(OUTPUT_DIR, "03_average_link.png") if save_outputs else None,
+        show_regions=True,
     )
 
     cv_single = float(size_single["size"].std() / size_single["size"].mean())
